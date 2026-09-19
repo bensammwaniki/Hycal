@@ -125,6 +125,7 @@ function hycal_shortcode($atts) {
 
   // Load Local Scripts
   wp_enqueue_script('hycal_helpers');
+  wp_enqueue_script('hycal_redesign');
   wp_enqueue_script('hycal_loader');
 
   // Load Styles. FullCalendar CSS is intentionally NOT enqueued here to allow
@@ -132,6 +133,7 @@ function hycal_shortcode($atts) {
   // Themes can enqueue a stylesheet on the 'hycal_enqueue_scripts' action or
   // by registering the 'fullcalendar' handle themselves if desired.
   wp_enqueue_style('hycal_css');
+  wp_enqueue_style('hycal_redesign_css');
 
   /**
    * Fires after core calendar scripts and styles are enqueued.

@@ -26,6 +26,7 @@ function hycal_register_frontend_css() {
 
   // Local
   wp_register_style('hycal_css', HYCAL_URL . 'public/css/hycal.css', null, HYCAL_VER);
+  wp_register_style('hycal_redesign_css', HYCAL_URL . 'public/css/hycal-redesign.css', ['hycal_css'], HYCAL_VER);
   wp_register_style('hycal_tippy', HYCAL_URL . 'public/css/tippy.css', null, HYCAL_VER);
 }
 
@@ -41,17 +42,18 @@ function hycal_register_frontend_js() {
 
   // Third-party libraries (bundled)
   wp_register_script('fullcalendar', HYCAL_URL . 'public/lib/fullcalendar/index.global.min.js', null, HYCAL_VER, true);
-  wp_register_script('fc_icalendar', HYCAL_URL . 'public/lib/fullcalendar/icalendar/index.global.min.js', array('ical_js'), HYCAL_VER, true);
-  wp_register_script('fc_locales', HYCAL_URL . 'public/lib/fullcalendar/locales/locales-all.global.min.js', null, HYCAL_VER, true);
+  wp_register_script('fc_icalendar', HYCAL_URL . 'public/lib/fullcalendar/icalendar/index.global.min.js', array('fullcalendar', 'ical_js'), HYCAL_VER, true);
+  wp_register_script('fc_locales', HYCAL_URL . 'public/lib/fullcalendar/locales/locales-all.global.min.js', array('fullcalendar'), HYCAL_VER, true);
   wp_register_script('ical_js', HYCAL_URL . 'public/lib/ical.js/ical.min.js', null, HYCAL_VER, true);
   wp_register_script('popper', HYCAL_URL . 'public/lib/popper/popper.min.js', null, HYCAL_VER, true);
-  wp_register_script('tippy', HYCAL_URL . 'public/lib/tippy/tippy.min.js', null, HYCAL_VER, true);
+  wp_register_script('tippy', HYCAL_URL . 'public/lib/tippy/tippy.min.js', array('popper'), HYCAL_VER, true);
 
   // Plugin scripts - hooks must load first as other scripts depend on hycalHooks
   wp_register_script('hycal_hooks', HYCAL_URL . 'public/js/hooks.js', [], HYCAL_VER, true);
   wp_register_script('hycal_helpers', HYCAL_URL . 'public/js/helpers.js', ['wp-i18n', 'hycal_hooks'], HYCAL_VER, true);
-  wp_register_script('hycal_loader', HYCAL_URL . 'public/js/hycal.js', ['wp-i18n', 'hycal_hooks'], HYCAL_VER, true);
-  wp_register_script('hycal_tippy', HYCAL_URL . 'public/js/tippy.js', ['wp-i18n', 'hycal_hooks'], HYCAL_VER, true);
+  wp_register_script('hycal_loader', HYCAL_URL . 'public/js/hycal.js', ['wp-i18n', 'hycal_hooks', 'fullcalendar', 'hycal_helpers'], HYCAL_VER, true);
+  wp_register_script('hycal_redesign', HYCAL_URL . 'public/js/hycal-redesign.js', ['hycal_hooks'], HYCAL_VER, true);
+  wp_register_script('hycal_tippy', HYCAL_URL . 'public/js/tippy.js', ['wp-i18n', 'hycal_hooks', 'tippy'], HYCAL_VER, true);
 
   wp_set_script_translations('hycal_helpers', 'hydrogen-calendar-embeds');
   wp_set_script_translations('hycal_loader', 'hydrogen-calendar-embeds');

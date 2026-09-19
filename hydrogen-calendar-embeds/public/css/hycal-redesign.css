@@ -47,7 +47,19 @@
   gap: 10px;
 }
 
+.fc-toolbar-chunk,
+.fc-button-group {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
 .fc-button {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-height: 32px;
+  line-height: 1.2 !important;
+  white-space: nowrap;
   padding: 6px 14px !important;
   border: 1px solid var(--hycal-border) !important;
   border-radius: var(--hycal-radius-sm) !important;
@@ -72,7 +84,11 @@
 
 .fc-prev-button,
 .fc-next-button {
+  box-sizing: border-box;
   width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   padding: 0 !important;
   border-radius: 50% !important;
 }
@@ -115,6 +131,20 @@
 
 .fc-day-other .fc-daygrid-day-number {
   color: var(--hycal-other-day);
+}
+
+.hycal-day-past .fc-daygrid-day-frame {
+  border-color: transparent;
+  background: transparent;
+}
+
+.hycal-day-past {
+  display: none;
+}
+
+.hycal-day-past .fc-daygrid-day-number,
+.hycal-day-past .fc-daygrid-day-events {
+  visibility: hidden;
 }
 
 .fc-daygrid-day-top {
@@ -209,35 +239,46 @@
 }
 
 .hycal-listview-active .hycal-grid-list {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
 }
 
-.hycal-daygroup + .hycal-daygroup {
-  margin-top: 18px;
+.hycal-daygroup {
+  display: flex;
+  flex: 1 1 280px;
+  min-width: 260px;
+  max-width: fit-content;
+  flex-direction: column;
+  align-self: stretch;
+  box-sizing: border-box;
+  padding: 0 12px 12px;
+  border: 1px solid var(--hycal-border);
+  border-radius: var(--hycal-radius);
+  background: var(--hycal-card-bg);
 }
 
 .hycal-day-cushion {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-  padding: 9px 12px;
-  border-left: 4px solid var(--hycal-brand);
-  border-radius: 0 var(--hycal-radius-sm) var(--hycal-radius-sm) 0;
+  margin: 0 -12px 10px;
+  padding: 11px 12px;
+  border-radius: var(--hycal-radius) var(--hycal-radius) 0 0;
   background: var(--hycal-surface);
   color: var(--hycal-brand);
   font-size: 13px;
   font-weight: 600;
 }
 
-.hycal-today-cushion {
-  border-left-color: var(--hycal-today) !important;
-  background: var(--hycal-today-tint) !important;
+.hycal-daygroup:nth-child(even) .hycal-day-cushion {
+  background: var(--hycal-today-tint);
 }
 
 .hycal-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
@@ -245,7 +286,6 @@
   display: flex;
   gap: 9px;
   padding: 10px 12px;
-  border: 1px solid var(--hycal-border);
   border-radius: var(--hycal-radius-sm);
   background: var(--hycal-card-bg);
 }
@@ -307,6 +347,10 @@
   border-radius: var(--hycal-radius);
   background: var(--hycal-card-bg);
   font-family: var(--hycal-font);
+}
+
+.hycal-listview-layout-active .hycal-agenda-panel {
+  display: none;
 }
 
 .hycal-agenda-title {
@@ -406,6 +450,13 @@
   }
 
   .hycal-card-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hycal-daygroup {
+    flex-basis: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 }

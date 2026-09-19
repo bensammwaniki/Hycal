@@ -42,6 +42,16 @@
     });
   }
 
+  function isPastDate(date) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+  }
+
+  function hidesPast(settings) {
+    return settings && (settings.hide_past === true || settings.hide_past === "true");
+  }
+
   function eventsForDay(calendar, date) {
     var dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     var dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
@@ -64,7 +74,12 @@
     var events = calendar
       .getEvents()
       .filter(function (event) {
-        return event.start && event.start < view.activeEnd && (event.end || event.start) >= view.activeStart;
+        return (
+          event.start &&
+          event.start < view.activeEnd &&
+          (event.end || event.start) >= view.activeStart &&
+          (!hidesPast(calendarElSettings(calendar)) || !isPastDate(event.end || event.start))
+        );
       })
       .sort(function (first, second) {
         return (first.start || 0) - (second.start || 0);
@@ -113,7 +128,12 @@
     gridList.innerHTML = html || '<p class="hycal-list-empty">No events in this range.</p>';
   }
 
+  function calendarElSettings(calendar) {
+    return calendar.el.hycalSettings || {};
+  }
+
   function configureCalendar(calendar, settings, calendarEl) {
+    calendarEl.hycalSettings = settings;
     var layout = document.createElement("div");
     layout.className = "hycal-agenda-layout";
     calendarEl.parentNode.insertBefore(layout, calendarEl);
@@ -134,6 +154,7 @@
     function toggleGridList(view) {
       var isList = view.type.toLowerCase().indexOf("list") !== -1;
       calendarEl.classList.toggle("hycal-listview-active", isList);
+      layout.classList.toggle("hycal-listview-layout-active", isList);
       if (isList) {
         renderGridList(calendar, view, gridList);
       }
@@ -141,7 +162,9 @@
 
     function openAgendaFor(date) {
       var dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      var dayEvents = eventsForDay(calendar, dayStart);
+      var dayEvents = eventsForDay(calendar, dayStart).filter(function (event) {
+        return !hidesPast(settings) || !isPastDate(event.end || event.start);
+      });
       var locale = settings.locale || "en";
       var title = dayStart.toLocaleDateString(locale, {
         weekday: "long",
@@ -184,13 +207,38 @@
       }
     }
 
+    calendarEl.hycalToggleGridList = toggleGridList;
     calendarEl.openAgendaFor = openAgendaFor;
     toggleGridList(calendar.view);
     openAgendaFor(new Date());
   }
 
-  hycalHooks.addFilter("hycal.fullcalendarOptions", function (args) {
+  hycalHooks.addFilter("hycal.fullcalendarOptions", function (args, settings) {
     args.dayMaxEvents = 2;
+    var previousDayCellClassNames = args.dayCellClassNames;
+    args.dayCellClassNames = function (argument) {
+      var classNames = previousDayCellClassNames
+        ? previousDayCellClassNames(argument)
+        : [];
+
+      if (!Array.isArray(classNames)) {
+        classNames = [classNames];
+      }
+      if (hidesPast(settings) && isPastDate(argument.date)) {
+        classNames.push("hycal-day-past");
+      }
+      return classNames;
+    };
+    var previousDayCellDidMount = args.dayCellDidMount;
+    args.dayCellDidMount = function (argument) {
+      if (previousDayCellDidMount) {
+        previousDayCellDidMount(argument);
+      }
+      if (hidesPast(settings) && isPastDate(argument.date)) {
+        argument.el.classList.add("hycal-day-past");
+        argument.el.style.display = "none";
+      }
+    };
     args.moreLinkClick = function (argument) {
       var calendarEl = argument.view.calendar.el;
       if (calendarEl.openAgendaFor) {
@@ -210,9 +258,10 @@
         previousViewDidMount(argument);
       }
       var calendarEl = argument.view.calendar.el;
-      calendarEl.classList.toggle("hycal-listview-active", argument.view.type.toLowerCase().indexOf("list") !== -1);
-      if (calendarEl.hycalGridList && calendarEl.hycalGridList.render) {
-        calendarEl.hycalGridList.render(argument.view);
+      if (calendarEl.hycalToggleGridList) {
+        calendarEl.hycalToggleGridList(argument.view);
+      } else {
+        calendarEl.classList.toggle("hycal-listview-active", argument.view.type.toLowerCase().indexOf("list") !== -1);
       }
     };
 
@@ -222,16 +271,30 @@
         previousDatesSet(argument);
       }
       var calendarEl = argument.view.calendar.el;
-      calendarEl.classList.toggle("hycal-listview-active", argument.view.type.toLowerCase().indexOf("list") !== -1);
-      if (calendarEl.hycalGridList && calendarEl.hycalGridList.render) {
-        calendarEl.hycalGridList.render(argument.view);
+      if (calendarEl.hycalToggleGridList) {
+        calendarEl.hycalToggleGridList(argument.view);
+      } else {
+        calendarEl.classList.toggle("hycal-listview-active", argument.view.type.toLowerCase().indexOf("list") !== -1);
       }
+    };
+
+    var previousEventsSet = args.eventsSet;
+    args.eventsSet = function (events) {
+      if (previousEventsSet) {
+        previousEventsSet(events);
+      }
+      document.querySelectorAll(".hycal-container").forEach(function (calendarEl) {
+        if (calendarEl.hycalGridList && calendarEl.hycalGridList.render && calendarEl.hycalCalendar) {
+          calendarEl.hycalGridList.render(calendarEl.hycalCalendar.view);
+        }
+      });
     };
 
     return args;
   });
 
   hycalHooks.addAction("hycal.afterRender", function (calendar, settings, calendarEl) {
+    calendarEl.hycalCalendar = calendar;
     configureCalendar(calendar, settings, calendarEl);
     calendarEl.hycalGridList = {
       render: function (view) {
