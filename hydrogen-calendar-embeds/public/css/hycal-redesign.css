@@ -201,6 +201,7 @@
   word-break: break-word;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .fc-daygrid-event .fc-event-time {
@@ -375,6 +376,27 @@
 
 .hycal-agenda-row:first-child {
   border-top: 0;
+}
+
+.hycal-agenda-location {
+  margin-top: 3px;
+  color: var(--hycal-text-muted);
+  font-size: 11px;
+}
+
+.hycal-agenda-link {
+  margin-top: 4px;
+}
+
+.hycal-agenda-link a {
+  color: var(--hycal-brand);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hycal-agenda-link a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 900px) {

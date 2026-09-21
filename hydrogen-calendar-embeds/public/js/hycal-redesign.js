@@ -35,11 +35,21 @@
     if (event.allDay) {
       return "All day";
     }
-
-    return event.start.toLocaleTimeString(locale || undefined, {
+    if (!event.start) {
+      return "";
+    }
+    var startTime = event.start.toLocaleTimeString(locale || undefined, {
       hour: "numeric",
       minute: "2-digit",
     });
+    if (event.end && (event.end.getTime() - event.start.getTime() > 60000)) {
+      var endTime = event.end.toLocaleTimeString(locale || undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      return startTime + " - " + endTime;
+    }
+    return startTime;
   }
 
   function isPastDate(date) {
@@ -59,7 +69,11 @@
     return calendar
       .getEvents()
       .filter(function (event) {
-        return event.start && event.start < dayEnd && (event.end || event.start) >= dayStart;
+        if (!event.start) return false;
+        var overlaps = event.end
+          ? (event.start < dayEnd && event.end > dayStart)
+          : (event.start >= dayStart && event.start < dayEnd);
+        return overlaps;
       })
       .sort(function (first, second) {
         return (first.start || 0) - (second.start || 0);
@@ -161,7 +175,10 @@
     }
 
     function openAgendaFor(date) {
+      if (!date) return;
       var dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      calendarEl.hycalSelectedDate = dayStart;
+
       var dayEvents = eventsForDay(calendar, dayStart).filter(function (event) {
         return !hidesPast(settings) || !isPastDate(event.end || event.start);
       });
@@ -170,35 +187,56 @@
         weekday: "long",
         month: "short",
         day: "numeric",
+        year: "numeric",
       });
 
-      agenda.querySelector(".hycal-agenda-title").textContent = title;
-      agenda.querySelector(".hycal-agenda-count").textContent =
-        dayEvents.length + (dayEvents.length === 1 ? " event" : " events");
+      var titleEl = agenda.querySelector(".hycal-agenda-title");
+      var countEl = agenda.querySelector(".hycal-agenda-count");
+      var bodyEl = agenda.querySelector(".hycal-agenda-body");
 
-      var body = agenda.querySelector(".hycal-agenda-body");
-      if (!dayEvents.length) {
-        body.innerHTML = '<p class="hycal-agenda-empty">No events scheduled.</p>';
-      } else {
-        body.innerHTML = dayEvents
-          .map(function (event) {
-            var className = sourceClass(event);
-            return (
-              '<div class="hycal-agenda-row' + (className ? " " + escapeHtml(className) : "") + '">' +
-              '<div class="hycal-agenda-bar"></div>' +
-              '<div class="hycal-agenda-row-body">' +
-              '<div class="hycal-agenda-time">' + escapeHtml(eventTime(event, locale)) + "</div>" +
-              '<div class="hycal-agenda-event-title">' + escapeHtml(event.title) + "</div>" +
-              "</div></div>"
-            );
-          })
-          .join("");
+      if (titleEl) titleEl.textContent = title;
+      if (countEl) {
+        countEl.textContent =
+          dayEvents.length + (dayEvents.length === 1 ? " event" : " events");
+      }
+
+      if (bodyEl) {
+        if (!dayEvents.length) {
+          bodyEl.innerHTML = '<p class="hycal-agenda-empty">No events scheduled for this day.</p>';
+        } else {
+          bodyEl.innerHTML = dayEvents
+            .map(function (event) {
+              var className = sourceClass(event);
+              var location = (event.extendedProps && event.extendedProps.location) || "";
+              var url = event.url || (event.extendedProps && event.extendedProps.url) || "";
+
+              var metaHtml = "";
+              if (location) {
+                metaHtml += '<div class="hycal-agenda-location">📍 ' + escapeHtml(location) + '</div>';
+              }
+              if (url && !url.includes("calendar.google.com")) {
+                metaHtml += '<div class="hycal-agenda-link"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">View details &rarr;</a></div>';
+              }
+
+              return (
+                '<div class="hycal-agenda-row' + (className ? " " + escapeHtml(className) : "") + '">' +
+                '<div class="hycal-agenda-bar"></div>' +
+                '<div class="hycal-agenda-row-body">' +
+                '<div class="hycal-agenda-time">' + escapeHtml(eventTime(event, locale)) + "</div>" +
+                '<div class="hycal-agenda-event-title">' + escapeHtml(event.title) + "</div>" +
+                metaHtml +
+                "</div></div>"
+              );
+            })
+            .join("");
+        }
       }
 
       calendarEl.querySelectorAll(".fc-daygrid-day.hycal-selected").forEach(function (cell) {
         cell.classList.remove("hycal-selected");
       });
-      var cell = calendarEl.querySelector('.fc-daygrid-day[data-date="' + dateKey(dayStart) + '"]');
+      var cellKey = dateKey(dayStart);
+      var cell = calendarEl.querySelector('.fc-daygrid-day[data-date="' + cellKey + '"]');
       if (cell) {
         cell.classList.add("hycal-selected");
       }
@@ -207,10 +245,37 @@
       }
     }
 
+    function onDatesSet(view) {
+      toggleGridList(view);
+      var selected = calendarEl.hycalSelectedDate;
+      var inView = selected && view.activeStart && view.activeEnd && selected >= view.activeStart && selected < view.activeEnd;
+
+      if (!inView) {
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (view.activeStart && view.activeEnd && today >= view.activeStart && today < view.activeEnd) {
+          selected = today;
+        } else if (view.currentStart) {
+          selected = view.currentStart;
+        } else {
+          selected = new Date();
+        }
+      }
+      openAgendaFor(selected);
+    }
+
     calendarEl.hycalToggleGridList = toggleGridList;
     calendarEl.openAgendaFor = openAgendaFor;
+    calendarEl.onDatesSet = onDatesSet;
+
     toggleGridList(calendar.view);
-    openAgendaFor(new Date());
+
+    var initDate = new Date();
+    initDate.setHours(0, 0, 0, 0);
+    if (calendar.view && calendar.view.activeStart && calendar.view.activeEnd && (initDate < calendar.view.activeStart || initDate >= calendar.view.activeEnd)) {
+      initDate = calendar.view.currentStart || initDate;
+    }
+    openAgendaFor(initDate);
   }
 
   hycalHooks.addFilter("hycal.fullcalendarOptions", function (args, settings) {
@@ -251,6 +316,16 @@
         argument.view.calendar.el.openAgendaFor(argument.date);
       }
     };
+    var previousEventClick = args.eventClick;
+    args.eventClick = function (info) {
+      if (previousEventClick) {
+        previousEventClick(info);
+      }
+      var calendarEl = info.view.calendar.el;
+      if (calendarEl.openAgendaFor && info.event && info.event.start) {
+        calendarEl.openAgendaFor(info.event.start);
+      }
+    };
 
     var previousViewDidMount = args.viewDidMount;
     args.viewDidMount = function (argument) {
@@ -258,10 +333,8 @@
         previousViewDidMount(argument);
       }
       var calendarEl = argument.view.calendar.el;
-      if (calendarEl.hycalToggleGridList) {
-        calendarEl.hycalToggleGridList(argument.view);
-      } else {
-        calendarEl.classList.toggle("hycal-listview-active", argument.view.type.toLowerCase().indexOf("list") !== -1);
+      if (calendarEl.onDatesSet) {
+        calendarEl.onDatesSet(argument.view);
       }
     };
 
@@ -271,10 +344,8 @@
         previousDatesSet(argument);
       }
       var calendarEl = argument.view.calendar.el;
-      if (calendarEl.hycalToggleGridList) {
-        calendarEl.hycalToggleGridList(argument.view);
-      } else {
-        calendarEl.classList.toggle("hycal-listview-active", argument.view.type.toLowerCase().indexOf("list") !== -1);
+      if (calendarEl.onDatesSet) {
+        calendarEl.onDatesSet(argument.view);
       }
     };
 
@@ -286,6 +357,9 @@
       document.querySelectorAll(".hycal-container").forEach(function (calendarEl) {
         if (calendarEl.hycalGridList && calendarEl.hycalGridList.render && calendarEl.hycalCalendar) {
           calendarEl.hycalGridList.render(calendarEl.hycalCalendar.view);
+        }
+        if (calendarEl.openAgendaFor && calendarEl.hycalSelectedDate) {
+          calendarEl.openAgendaFor(calendarEl.hycalSelectedDate);
         }
       });
     };
