@@ -240,7 +240,7 @@
       if (cell) {
         cell.classList.add("hycal-selected");
       }
-      if (window.innerWidth <= 640) {
+      if (window.innerWidth <= 768) {
         agenda.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
