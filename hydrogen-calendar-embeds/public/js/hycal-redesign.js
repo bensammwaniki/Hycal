@@ -270,6 +270,18 @@
 
     toggleGridList(calendar.view);
 
+    calendarEl.addEventListener("click", function (event) {
+      var dayCell = event.target.closest(".fc-daygrid-day[data-date]");
+      if (dayCell && dayCell.getAttribute("data-date")) {
+        var rawDate = dayCell.getAttribute("data-date");
+        var parts = rawDate.split("-").map(Number);
+        if (parts.length === 3) {
+          var date = new Date(parts[0], parts[1] - 1, parts[2]);
+          openAgendaFor(date);
+        }
+      }
+    });
+
     var initDate = new Date();
     initDate.setHours(0, 0, 0, 0);
     if (calendar.view && calendar.view.activeStart && calendar.view.activeEnd && (initDate < calendar.view.activeStart || initDate >= calendar.view.activeEnd)) {
